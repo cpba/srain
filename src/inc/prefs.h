@@ -21,19 +21,19 @@
 
 #include "srain.h"
 #include "server.h"
-#include "log.h"
 #include "ret.h"
+#include "version.h"
 
-void prefs_init();
-SrnRet prefs_read();
-void prefs_finalize();
+typedef struct _SrnConfigManager SrnConfigManager;
 
-SrnRet prefs_read_log_prefs(LogPrefs *prefs);
-SrnRet prefs_read_sui_app_prefs(SuiAppPrefs *prefs);
-SrnRet prefs_read_server_prefs_list();
-SrnRet prefs_read_server_prefs(ServerPrefs *prefs);
-SrnRet prefs_read_chat_prefs(ChatPrefs *prefs, const char *srv_name, const char *chat_name);
-SrnRet prefs_read_sirc_prefs(SircPrefs *prefs, const char *srv_name);
-SrnRet prefs_read_sui_prefs(SuiPrefs *prefs, const char *srv_name, const char *chat_name);
+SrnConfigManager* srn_config_manager_new(SrnVersion *ver);
+void srn_config_manager_free(SrnConfigManager *mgr);
+SrnRet srn_config_manager_read_user_config(SrnConfigManager *mgr, const char *file);
+SrnRet srn_config_manager_read_system_config(SrnConfigManager *mgr, const char *file);
+
+SrnRet srn_config_manager_read_log_config(SrnConfigManager *mgr, LogPrefs *cfg);
+SrnRet srn_config_manager_read_application_config(SrnConfigManager *mgr, SrnApplicationConfig *cfg);
+SrnRet srn_config_manager_read_server_config(SrnConfigManager *mgr, ServerPrefs *cfg, const char *srv_name);
+SrnRet srn_config_manager_read_chat_config(SrnConfigManager *mgr, ChatPrefs *cfg, const char *srv_name, const char *chat_name);
 
 #endif /*__PREFS_H */
