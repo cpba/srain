@@ -19,12 +19,23 @@
 #ifndef __PREFS_H
 #define __PREFS_H
 
+#include <libconfig.h>
+
+// FIXME
+typedef struct _SrnConfigManager SrnConfigManager;
+
 #include "srain.h"
+#include "app.h"
 #include "server.h"
 #include "ret.h"
 #include "version.h"
+#include "log.h"
 
-typedef struct _SrnConfigManager SrnConfigManager;
+struct _SrnConfigManager {
+    SrnVersion *ver; // Compatible version
+    config_t user_cfg;
+    config_t system_cfg;
+};
 
 SrnConfigManager* srn_config_manager_new(SrnVersion *ver);
 void srn_config_manager_free(SrnConfigManager *mgr);
@@ -33,7 +44,7 @@ SrnRet srn_config_manager_read_system_config(SrnConfigManager *mgr, const char *
 
 SrnRet srn_config_manager_read_log_config(SrnConfigManager *mgr, LogPrefs *cfg);
 SrnRet srn_config_manager_read_application_config(SrnConfigManager *mgr, SrnApplicationConfig *cfg);
-SrnRet srn_config_manager_read_server_config(SrnConfigManager *mgr, ServerPrefs *cfg, const char *srv_name);
+SrnRet srn_config_manager_read_server_config(SrnConfigManager *mgr, ServerPrefs *cfg);
 SrnRet srn_config_manager_read_chat_config(SrnConfigManager *mgr, ChatPrefs *cfg, const char *srv_name, const char *chat_name);
 
 #endif /*__PREFS_H */

@@ -35,19 +35,13 @@
 #include "i18n.h"
 #include "version.h"
 
-struct _SrnConfigManager {
-    SrnVersion *ver; // Compatible version
-    config_t user_cfg;
-    config_t system_cfg;
-};
+static SrnRet read_config(SrnConfigManager *mgr, config_t *cfg, const char *file);
 
-static SrnRet read_config(config_t *cfg, const char *file);
-
-Prefs *srn_config_manager_new(SrnVersion *ver){
+SrnConfigManager *srn_config_manager_new(SrnVersion *ver){
     SrnConfigManager *mgr;
 
     mgr = g_malloc0(sizeof(SrnConfigManager));
-    prefs->ver = ver;
+    mgr->ver = ver;
     config_init(&mgr->user_cfg);
     config_init(&mgr->system_cfg);
 
@@ -64,7 +58,7 @@ SrnRet srn_config_manager_read_system_config(SrnConfigManager *mgr,
         const char *file){
     SrnRet ret;
 
-    ret = read_config(&mgr->system_cfg, file);
+    ret = read_config(mgr, &mgr->system_cfg, file);
     if (!RET_IS_OK(ret)){
         return RET_ERR(_("Failed to read system configuration file: %1$s"),
                 RET_MSG(ret));
@@ -76,7 +70,7 @@ SrnRet srn_config_manager_read_user_config(SrnConfigManager *mgr,
         const char *file){
     SrnRet ret;
 
-    ret = read_config(&mgr->user_cfg, file);
+    ret = read_config(mgr, &mgr->user_cfg, file);
     if (!RET_IS_OK(ret)){
         return RET_ERR(_("Failed to read user configuration file: %1$s"),
                 RET_MSG(ret));
@@ -84,7 +78,7 @@ SrnRet srn_config_manager_read_user_config(SrnConfigManager *mgr,
     return SRN_OK;
 }
 
-static SrnRet read_config(config_t *cfg, const char *file){
+static SrnRet read_config(SrnConfigManager *mgr, config_t *cfg, const char *file){
     char *dir;
     const char *rawver;
     SrnVersion *ver;
@@ -103,7 +97,7 @@ static SrnRet read_config(config_t *cfg, const char *file){
 
     /* Verify configure version */
     if (!config_lookup_string(cfg, "version", &rawver)){
-        ret = RET_ERR(_("No version found in configuration file: %1$s"), path);
+        ret = RET_ERR(_("No version found in configuration file: %1$s"), file);
         goto FIN;
     }
     ver = srn_version_new(rawver);
@@ -114,21 +108,21 @@ static SrnRet read_config(config_t *cfg, const char *file){
     }
     LOG_FR("Configuration file version: %d.%d.%d", ver->major, ver->minor, ver->micro);
 
-    if (cfg->ver->major > ver->major){
+    if (mgr->ver->major > ver->major){
         ret = RET_ERR(_("Configuration file version: %1$s, application version: %2$s, "
                     "Please migrate your profile to new version"),
                 ver->major,
-                cfg->ver->major);
+                mgr->ver->major);
         goto FIN;
     }
 
     ret = SRN_OK;
-RET:
-    if (!dir){
+FIN:
+    if (dir){
         g_free(dir);
     }
-    if (!version){
-        srn_version_free(version);
+    if (ver){
+        srn_version_free(ver);
     }
     return ret;
 }

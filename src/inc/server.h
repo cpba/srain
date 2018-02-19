@@ -129,6 +129,9 @@ struct _Chat {
 };
 
 struct _ChatPrefs {
+    bool log; // TODO
+    bool render_mirc_color;
+
     SuiPrefs *ui;
 };
 
@@ -193,8 +196,7 @@ struct _ServerPrefs {
                          appeared in predefined server list and *CAN NOT* be
                          freed by ``server_prefs_free()``. */
     char *name;
-    char *host;
-    int port;
+    GSList *addrs;
     char *passwd;
 
     /* User */

@@ -279,7 +279,7 @@ void chat_add_recv_message(Chat *chat, const char *origin, const char *content){
     FilterFlag fflag;
 
     dflag = DECORATOR_PANGO_MARKUP | DECORATOR_RELAY | DECORATOR_MENTION;
-    if (chat->prefs->ui->render_mirc_color) {
+    if (chat->prefs->render_mirc_color) {
         dflag |= DECORATOR_MIRC_COLORIZE;
     } else {
         dflag |= DECORATOR_MIRC_STRIP;
@@ -353,7 +353,7 @@ void chat_add_action_message(Chat *chat, const char *origin, const char *content
     }
 
     dflag = DECORATOR_PANGO_MARKUP;
-    if (chat->prefs->ui->render_mirc_color) {
+    if (chat->prefs->render_mirc_color) {
         dflag |= DECORATOR_MIRC_COLORIZE;
     } else {
         dflag |= DECORATOR_MIRC_STRIP;
@@ -527,7 +527,7 @@ void chat_set_topic(Chat *chat, const char *origin, const char *topic){
     }
 
     dflag = DECORATOR_PANGO_MARKUP;
-    if (chat->prefs->ui->render_mirc_color) {
+    if (chat->prefs->render_mirc_color) {
         dflag |= DECORATOR_MIRC_COLORIZE;
     } else {
         dflag |= DECORATOR_MIRC_STRIP;

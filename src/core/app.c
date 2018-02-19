@@ -27,6 +27,7 @@
 #include <glib.h>
 
 #include "sui/sui.h"
+#include "app.h"
 #include "server_ui_event.h"
 #include "server_irc_event.h"
 #include "meta.h"

@@ -24,6 +24,13 @@
  * @date 2018-02-16
  */
 
+#include <glib.h>
+#include <libconfig.h>
+
+#include "prefs.h"
+#include "i18n.h"
+#include "utils.h"
+
 /* Libconfig helpers */
 static int config_lookup_string_ex(const config_t *config, const char *path, char **value);
 static int config_setting_lookup_string_ex(const config_setting_t *config, const char *name, char **value);
@@ -35,26 +42,34 @@ static int config_setting_lookup_bool_ex(const config_setting_t *config, const c
 static SrnRet read_log_config_from_cfg(config_t *cfg, LogPrefs *log_cfg);
 static SrnRet read_log_targets_from_log(config_setting_t *log, const char *name, GSList **lst);
 
+static SrnRet read_application_config_from_cfg(config_t *cfg, SrnApplicationConfig *app_cfg);
+
 static SrnRet read_server_config_from_server(config_setting_t *server, ServerPrefs *prefs);
 static SrnRet read_server_config_from_server_list(config_setting_t *server_list, ServerPrefs *prefs);
 static SrnRet read_server_config_from_cfg(config_t *cfg, ServerPrefs *prefs);
 
-static SrnRet read_chat_config_from_chat(config_setting_t *chat, SuiPrefs *prefs);
-static SrnRet read_chat_config_from_chat_list(config_setting_t *chat_list, SuiPrefs *prefs, const char *chat_name);
-static SrnRet read_chat_config_from_cfg(config_t *cfg, SuiPrefs *prefs, const char *srv_name, const char *chat_name);
+static SrnRet read_chat_config_from_chat(config_setting_t *chat, ChatPrefs *prefs);
+static SrnRet read_chat_config_from_chat_list(config_setting_t *chat_list, ChatPrefs *prefs, const char *chat_name);
+static SrnRet read_chat_config_from_cfg(config_t *cfg, ChatPrefs *prefs, const char *srv_name, const char *chat_name);
 
-SrnRet srn_config_manager_read_log_prefs(LogPrefs *prefs){
+/*****************************************************************************
+ * Exported functions
+ *****************************************************************************/
+
+SrnRet srn_config_manager_read_log_prefs(SrnConfigManager *mgr, LogPrefs *prefs){
     SrnRet ret;
 
-    ret = read_log_config_from_cfg(&builtin_cfg, prefs);
+    ret = read_log_config_from_cfg(&mgr->system_cfg, prefs);
     if (!RET_IS_OK(ret)){
         return RET_ERR(_("Error occurred while read log config in %1$s: %2$s"),
-                "builtin.cfg", RET_MSG(ret));
+                config_setting_source_file(config_root_setting(&mgr->system_cfg)),
+                RET_MSG(ret));
     }
-    ret = read_log_config_from_cfg(&user_cfg, prefs);
+    ret = read_log_config_from_cfg(&mgr->user_cfg, prefs);
     if (!RET_IS_OK(ret)){
         return RET_ERR(_("Error occurred while read log config in %1$s: %2$s"),
-                "srain.cfg", RET_MSG(ret));
+                config_setting_source_file(config_root_setting(&mgr->user_cfg)),
+                RET_MSG(ret));
     }
 
     return SRN_OK;
@@ -62,11 +77,22 @@ SrnRet srn_config_manager_read_log_prefs(LogPrefs *prefs){
 
 SrnRet srn_config_manager_read_application_config(SrnConfigManager *mgr,
         SrnApplicationConfig *cfg){
-    config_lookup_string_ex(&mgr->system_cfg, "application.id", &cfg->id);
-    config_lookup_string_ex(&mgr->user_cfg, "application.id", &cfg->id);
-    config_lookup_string_ex(&mgr->system_cfg, "application.theme", &cfg->theme);
-    config_lookup_string_ex(&mgr->user_cfg, "application.theme", &cfg->theme);
+    SrnRet ret;
 
+    ret = read_application_config_from_cfg(&mgr->system_cfg, cfg);
+    if (!RET_IS_OK(ret)){
+        return RET_ERR(_("Error occurred while read application config in %1$s: %2$s"),
+                config_setting_source_file(config_root_setting(&mgr->system_cfg)),
+                RET_MSG(ret));
+    }
+    ret = read_application_config_from_cfg(&mgr->user_cfg, cfg);
+    if (!RET_IS_OK(ret)){
+        return RET_ERR(_("Error occurred while read application config in %1$s: %2$s"),
+                config_setting_source_file(config_root_setting(&mgr->user_cfg)),
+                RET_MSG(ret));
+    }
+
+    return SRN_OK;
     return SRN_OK;
 }
 
@@ -80,10 +106,10 @@ SrnRet srn_config_manager_read_server_config(SrnConfigManager *mgr,
                 config_setting_source_file(config_root_setting(&mgr->system_cfg)),
                 RET_MSG(ret));
     }
-    ret = read_server_config_from_cfg(&user_cfg, prefs);
+    ret = read_server_config_from_cfg(&mgr->user_cfg, prefs);
     if (!RET_IS_OK(ret)){
-        return RET_ERR(_("Error occurred while read server prefs in %1$s: %2$s"),
-                config_setting_source_file(config_root_setting(&mgr->system_cfg)),
+        return RET_ERR(_("Error occurred while read server config in %1$s: %2$s"),
+                config_setting_source_file(config_root_setting(&mgr->user_cfg)),
                 RET_MSG(ret));
     }
 
@@ -104,7 +130,7 @@ SrnRet srn_config_manager_read_chat_config(SrnConfigManager *mgr,
     ret = read_chat_config_from_cfg(&mgr->user_cfg, prefs, srv_name, chat_name);
     if (!RET_IS_OK(ret)){
         return RET_ERR(_("Error occurred while read chat config in %1$s: %2$s"),
-                config_setting_source_file(config_root_setting(&mgr->system_cfg)),
+                config_setting_source_file(config_root_setting(&mgr->user_cfg)),
                 RET_MSG(ret));
     }
 
@@ -114,6 +140,7 @@ SrnRet srn_config_manager_read_chat_config(SrnConfigManager *mgr,
 /*****************************************************************************
  * Static functions
  *****************************************************************************/
+
 static SrnRet read_log_config_from_cfg(config_t *cfg, LogPrefs *prefs){
     SrnRet ret;
     config_setting_t *log;
@@ -162,10 +189,10 @@ static SrnRet read_log_targets_from_log(config_setting_t *log, const char *name,
     return SRN_OK;
 }
 
-static SrnRet srn_config_manager_read_application_config_from_cfg(config_t *cfg,
+static SrnRet read_application_config_from_cfg(config_t *cfg,
         SrnApplicationConfig *app_cfg){
-    config_lookup_string_ex(&cfg, "id", &app_cfg->id);
-    config_lookup_string_ex(&cfg "theme", &app_cfg->theme);
+    config_lookup_string_ex(cfg, "id", &app_cfg->id);
+    config_lookup_string_ex(cfg, "theme", &app_cfg->theme);
 
     /* Read server config list */
     // TODO
@@ -174,6 +201,8 @@ static SrnRet srn_config_manager_read_application_config_from_cfg(config_t *cfg,
     if (server_list){
         for (int i = 0, count = config_setting_length(server_list); i < count; i++){
             const char *name = NULL;
+            config_setting_t *server;
+            SrnRet ret;
             ServerPrefs *prefs;
 
             server = config_setting_get_elem(server_list, i);
@@ -194,8 +223,7 @@ static SrnRet srn_config_manager_read_application_config_from_cfg(config_t *cfg,
                 server_prefs_free(prefs);
                 return ret;
             }
-            app->server_config_list = g_slist_append(
-                app->server_config_list, prefs);
+            app_cfg->server_list = g_slist_append(app_cfg->server_list, prefs);
         }
     }
 
@@ -203,41 +231,17 @@ static SrnRet srn_config_manager_read_application_config_from_cfg(config_t *cfg,
     return SRN_OK;
 }
 
-/**
- * @brief Wrapper of config_lookup_string(), This function will allocate a new
- * string, you should free it by yourself
- *
- * @param config
- * @param path
- * @param value
- *
- * @return
- */
-static int config_lookup_string_ex(const config_t *config, const char *path, char **value){
-    int ret;
-    const char *constval = NULL;
-
-    ret = config_lookup_string(config, path, &constval);
-    if (constval){
-        *value = g_strdup(constval);
-    }
-
-    return ret;
-}
-
 static SrnRet read_server_config_from_server(config_setting_t *server,
         ServerPrefs *prefs){
-    SrnRet ret;
-
     /* Read server meta info */
     // the name of prefs has been set
     // config_setting_lookup_string_ex(server, "name", &prefs->name);
     config_setting_lookup_string_ex(server, "password", &prefs->passwd);
-    config_setting_lookup_bool_ex(server, "tls", &prefs->tls);
-    config_setting_lookup_bool_ex(server, "tls_noverify", &prefs->tls_noverify);
-    config_setting_lookup_string_ex(server, "encoding", &prefs->encoding);
-    if (prefs->tls_noverify) {
-        prefs->tls = TRUE;
+    config_setting_lookup_bool_ex(server, "tls", &prefs->irc->tls);
+    config_setting_lookup_bool_ex(server, "tls_noverify", &prefs->irc->tls_noverify);
+    config_setting_lookup_string_ex(server, "encoding", &prefs->irc->encoding);
+    if (prefs->irc->tls_noverify) {
+        prefs->irc->tls = TRUE;
     }
 
     /* Read server.addrs */
@@ -341,7 +345,7 @@ static SrnRet read_chat_config_from_chat(config_setting_t *chat, ChatPrefs *pref
     config_setting_lookup_bool_ex(chat, "render_mirc_color", &prefs->render_mirc_color);
 
     /* Read url handlers */
-    config_setting_lookup_bool_ex(chat, "url_handlers.http.fetch_image", &prefs->preview_image);
+    config_setting_lookup_bool_ex(chat, "url_handlers.http.fetch_image", &prefs->ui->preview_image);
     // TODO
 
     return SRN_OK;
@@ -438,6 +442,28 @@ static SrnRet read_chat_config_from_cfg(config_t *cfg, ChatPrefs *prefs,
 }
 
 /**
+ * @brief Wrapper of config_lookup_string(), This function will allocate a new
+ * string, you should free it by yourself
+ *
+ * @param config
+ * @param path
+ * @param value
+ *
+ * @return
+ */
+static int config_lookup_string_ex(const config_t *config, const char *path, char **value){
+    int ret;
+    const char *constval = NULL;
+
+    ret = config_lookup_string(config, path, &constval);
+    if (constval){
+        *value = g_strdup(constval);
+    }
+
+    return ret;
+}
+
+/**
  * @brief Wrapper of config_setting_lookup_string(), This function will
  *      allocate a new string, you should free it by yourself
  *
@@ -460,7 +486,7 @@ static int config_setting_lookup_string_ex(const config_setting_t *config,
 
 static char* config_setting_get_string_elem_ex(const config_setting_t *setting,
         int index){
-    return g_strdup(config_setting_get_string_elem(setting, i));
+    return g_strdup(config_setting_get_string_elem(setting, index));
 }
 
 static int config_lookup_bool_ex(const config_t *config, const char *name,

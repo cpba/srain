@@ -134,13 +134,14 @@ ServerPrefs* server_prefs_get_prefs_by_host_port(const char *host, int port){
 
     lst = server_prefs_list;
 
-    while (lst){
-        prefs = lst->data;
-        if (g_ascii_strcasecmp(prefs->host, host) == 0 && prefs->port == port){
-            return prefs;
-        }
-        lst = g_slist_next(lst);
-    }
+    // FIXME: config
+    // while (0){
+    //     prefs = lst->data;
+    //     if (g_ascii_strcasecmp(prefs, ->host, host) == 0 && prefs->port == port){
+    //         return prefs;
+    //     }
+    //     lst = g_slist_next(lst);
+    // }
 
     return NULL;
 }
@@ -181,8 +182,8 @@ SrnRet server_prefs_check(ServerPrefs *prefs){
         return RET_ERR(missing, "name");
     }
 
-    if (str_is_empty(prefs->host)) {
-        return RET_ERR(missing, "host");
+    if (g_slist_length(prefs->addrs) == 0) {
+        return RET_ERR(missing, "addrs");
     }
 
     if (str_is_empty(prefs->nickname)) {
@@ -237,13 +238,14 @@ SrnRet server_prefs_check(ServerPrefs *prefs){
         return RET_ERR(missing, "irc");
     }
 
-    if (prefs->port == 0) {
-        if (prefs->irc->tls) {
-            prefs->port = 6697;
-        } else {
-            prefs->port = 6667;
-        }
-    }
+    // FIXME
+    // if (prefs->port == 0) {
+    //     if (prefs->irc->tls) {
+    //         prefs->port = 6697;
+    //     } else {
+    //         prefs->port = 6667;
+    //     }
+    // }
 
     return sirc_prefs_check(prefs->irc);
 }
@@ -257,7 +259,7 @@ void server_prefs_free(ServerPrefs *prefs){
     server_prefs_list_rm(prefs);
 
     str_assign(&prefs->name, NULL);
-    str_assign(&prefs->host, NULL);
+    g_slist_free_full(prefs->addrs, g_free);
     str_assign(&prefs->passwd, NULL);
     str_assign(&prefs->nickname, NULL);
     str_assign(&prefs->username, NULL);
@@ -307,13 +309,13 @@ char* server_prefs_dump(ServerPrefs *prefs){
     str = g_string_new("");
     g_string_append_printf(str,
             _("*** Server name: %s, Instance: %p\n"
-                "\tHost: %s, Port: %d, Password: %s\n"
+                "\tAddresses: %s, Password: %s\n"
                 "\tNickname: %s, Username: %s, Realname: %s\n"
                 "\tLogin method: %s, User password: %s\n"
                 "\tPart: %s, Kick: %s, Away: %s, Quit: %s\n"
                 "\tIRC configuration: %s"),
             prefs->name, prefs->srv,
-            prefs->host, prefs->port, passwd,
+            /* TODO: prefs->addrs */ "TODO", passwd,
             prefs->nickname, prefs->username, prefs->realname,
             login_method, user_passwd,
             prefs->part_message, prefs->kick_message, prefs->away_message, prefs->quit_message,

@@ -19,13 +19,22 @@
 #ifndef __SRN_APPLICATION_H
 #define __SRN_APPLICATION_H
 
-#include <gtk/gtk.h>
+#include <glib.h>
+
+#include "sui/sui.h"
+#include "sirc/sirc.h"
+#include "prefs.h"
+#include "version.h"
 
 #define SRN_TYPE_APPLICATION (srn_application_get_type())
 #define SRN_APPLICATION(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), SRN_TYPE_APPLICATION, SrnApplication))
 
+typedef struct _SrnApplication SrnApplication;
+typedef struct _SrnApplicationClass SrnApplicationClass;
+typedef struct _SrnApplicationConfig SrnApplicationConfig;
+
 struct _SrnApplication {
-    GtkApplication parent;
+    GApplication parent;
 
     SrnVersion *ver;
     SrnConfigManager *cfg_mgr;
@@ -37,11 +46,10 @@ struct _SrnApplication {
 
     GSList *window_list;
     GSList *server_list;
-    GSList *server_cfg_list;
 };
 
 struct _SrnApplicationClass {
-    GtkApplicationClass parent_class;
+    GApplicationClass parent_class;
 };
 
 struct _SrnApplicationConfig {
@@ -49,10 +57,8 @@ struct _SrnApplicationConfig {
     bool create_user_file; // TODO
     char *id;
     char *theme;
-}
-
-typedef struct _SrnApplication SrnApplication;
-typedef struct _SrnApplicationClass SrnApplicationClass;
+    GSList *server_list;
+};
 
 GType srn_application_get_type(void);
 SrnApplication *srn_application_new(void);

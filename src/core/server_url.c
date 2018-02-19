@@ -93,12 +93,13 @@ SrnRet server_url_open(const char *url){
         if (!RET_IS_OK(ret)){
             goto fin;
         }
-        if (!str_is_empty(host)){
-            str_assign(&prefs->host, host);
-        }
-        if (port){
-            prefs->port = port;
-        }
+        // FIXME: config
+        // if (!str_is_empty(host)){
+        //     str_assign(&prefs->host, host);
+        // }
+        // if (port){
+        //     prefs->port = port;
+        // }
         if (!str_is_empty(passwd)){
             str_assign(&prefs->passwd, passwd);
         }

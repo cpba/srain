@@ -373,10 +373,12 @@ static SrnRet on_command_server(Command *cmd, void *user_data){
     if (g_ascii_strcasecmp(subcmd, "add") == 0
             || g_ascii_strcasecmp(subcmd, "set") == 0){
         if (command_get_opt(cmd, "-host", &host)){
-            str_assign(&prefs->host, host);
+            // FIXME: config
+            // str_assign(&prefs->host, host);
         }
         if (command_get_opt(cmd, "-port", &port)){
-            prefs->port = atoi(port);
+            // FIXME: config
+            // prefs->port = atoi(port);
         }
         if (command_get_opt(cmd, "-pwd", &passwd)){
             str_assign(&prefs->passwd, passwd);
@@ -506,14 +508,16 @@ static SrnRet on_command_connect(Command *cmd, void *user_data){
     }
 
     if (!str_is_empty(host)){
-        str_assign(&prefs->host, host);
+        // FIXME: config
+        // str_assign(&prefs->host, host);
     }
     if (!str_is_empty(nick)){
         str_assign(&prefs->nickname, nick);
     }
 
     if (command_get_opt(cmd, "-port", &port)){
-        prefs->port = atoi(port);
+        // FIXME: config
+        // prefs->port = atoi(port);
     }
     if (command_get_opt(cmd, "-pwd", &passwd)){
         str_assign(&prefs->passwd, passwd);
