@@ -28,30 +28,35 @@ struct _SrnApplication {
     GtkApplication parent;
 
     SrnVersion *ver;
-    SrnPrefs *srn_prefs;
-    SrnApplicationPrefs *prefs;
+    SrnConfigManager *cfg_mgr;
+    SrnApplicationConfig *cfg;
+
+    SuiAppEvents ui_app_events; // TODO: rename
+    SuiEvents ui_events;
+    SircEvents irc_events;
 
     GSList *window_list;
     GSList *server_list;
-    GSList *server_prefs_list;
+    GSList *server_cfg_list;
 };
 
 struct _SrnApplicationClass {
     GtkApplicationClass parent_class;
 };
 
-struct _SrnApplicationPrefs {
+struct _SrnApplicationConfig {
     bool prompt_on_quit; // TODO
     bool create_user_file; // TODO
     char *id;
     char *theme;
 }
+
 typedef struct _SrnApplication SrnApplication;
 typedef struct _SrnApplicationClass SrnApplicationClass;
 
 GType srn_application_get_type(void);
-SrnApplication *srn_application_new(SrnPrefs *srn_prefs);
-void srn_application_run(void);
+SrnApplication *srn_application_new(void);
+void srn_application_run(SrnApplication *app, int argc, char *argv[]);
 void srn_application_quit(SrnApplication *app);
 
 /* Only one SrnApplication instance in one application */

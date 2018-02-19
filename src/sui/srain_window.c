@@ -224,8 +224,8 @@ static void srain_window_class_init(SrainWindowClass *class){
     gtk_widget_class_bind_template_child(GTK_WIDGET_CLASS(class), SrainWindow, sidebar_box);
 }
 
-SrainWindow* srain_window_new(SrainApp *app){
-    return g_object_new(SRAIN_TYPE_WINDOW, "application", app, NULL);
+SrainWindow* srain_window_new(void){
+    return g_object_new(SRAIN_TYPE_WINDOW, NULL);
 }
 
 void srain_window_add_buffer(SrainWindow *win, SrainBuffer *buffer){

@@ -22,6 +22,7 @@
 #include <time.h>
 #include "srain.h"
 
+typedef struct _SuiWindow SuiWindow;
 typedef struct _SuiSession SuiSession;
 typedef int SuiSessionFlag;
 typedef struct _SuiMessage SuiMessage;
@@ -30,7 +31,6 @@ typedef enum _UserType UserType;
 #define SUI_SESSION_SERVER      1 << 0
 #define SUI_SESSION_CHANNEL     1 << 1
 #define SUI_SESSION_DIALOG      1 << 2
-#define SUI_SESSION_NEWWINDOW   1 << 3  // Not used yet
 
 // TODO Rename type
 typedef enum {
@@ -58,8 +58,10 @@ enum _UserType {
 #include "sui_prefs.h"
 #undef __IN_SUI_H
 
-void sui_main_loop(int argc, char *argv[], SuiAppEvents *events, SuiAppPrefs *prefs);
-void sui_proc_pending_event();
+/* SuiWindow */
+SuiWindow* sui_new_window(void);
+void sui_free_window(SuiWindow *win);
+void sui_proc_pending_event(void);
 
 /* SuiSession */
 SuiSession *sui_new_session(SuiEvents *events, SuiPrefs *prefs, SuiSessionFlag flag);

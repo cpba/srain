@@ -35,7 +35,7 @@
 #include "i18n.h"
 #include "log.h"
 
-extern SrainWindow *srain_win;
+extern SuiWindow *sui_win;
 
 /**
  * @brief get a non-internal child widget by `name` in GtkListBox `widget`
@@ -207,7 +207,7 @@ gboolean activate_link(GtkLabel *label, const char *uri, gpointer user_data){
         GError *err = NULL;
 
 #if GTK_CHECK_VERSION(3, 22, 0)
-        gtk_show_uri_on_window(GTK_WINDOW(srain_win), uri,
+        gtk_show_uri_on_window(GTK_WINDOW(sui_win->win), uri,
                 gtk_get_current_event_time(), &err);
 #else
         gtk_show_uri(NULL, uri, gtk_get_current_event_time(), &err);

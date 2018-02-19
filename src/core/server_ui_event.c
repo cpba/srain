@@ -45,44 +45,14 @@ static Server* ctx_get_server(SuiSession *sui);
 static Chat* ctx_get_chat(SuiSession *sui);
 
 SrnRet server_ui_event_open(SuiEvent event, GVariantDict *params){
-    int len;
-    char **urls;
-    SrnRet ret = SRN_OK;
-
-    g_variant_dict_lookup(params, "urls", SUI_EVENT_PARAM_STRINGS, &urls);
-    len =  g_strv_length(urls);
-
-    for (int i = 0; i < len; i ++){
-        ret = server_url_open(urls[i]);
-        if (!RET_IS_OK(ret)){
-            return ret;
-        }
-    }
-
-    return ret;
+    return SRN_OK;
 }
 
 SrnRet server_ui_event_activate(SuiEvent event, GVariantDict *params){
-    return rc_read();
+    return SRN_OK;
 }
 
 SrnRet server_ui_event_shutdown(SuiEvent event, GVariantDict *params){
-    extern GSList *server_prefs_list;
-    GSList *lst;
-
-    lst = server_prefs_list;
-    while (lst){
-        ServerPrefs *prefs = lst->data;
-        if (prefs->srv && prefs->srv->state == SERVER_STATE_CONNECTED){
-            sirc_cmd_quit(prefs->srv->irc, prefs->quit_message);
-            /* FIXME: we need a global App object in core module,
-             * force free server for now */
-            server_state_transfrom(prefs->srv, SERVER_ACTION_QUIT);
-            server_state_transfrom(prefs->srv, SERVER_ACTION_DISCONNECT_FINISH);
-        }
-        lst = g_slist_next(lst);
-    }
-
     return SRN_OK;
 }
 

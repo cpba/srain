@@ -34,7 +34,7 @@ typedef struct _SrainWindow SrainWindow;
 typedef struct _SrainWindowClass SrainWindowClass;
 
 GType srain_window_get_type(void);
-SrainWindow *srain_window_new(SrainApp *app);
+SrainWindow *srain_window_new(void);
 
 void srain_window_add_buffer(SrainWindow *win, SrainBuffer *buffer);
 void srain_window_rm_buffer(SrainWindow *win, SrainBuffer *buffer);
@@ -49,8 +49,5 @@ void srain_window_tray_icon_stress(SrainWindow *win, int stress);
 
 SrainConnectPopover *srain_window_get_connect_popover(SrainWindow *win);
 SrainJoinPopover *srain_window_get_join_popover(SrainWindow *win);
-
-/* Only one SrainWindow instance in one application */
-extern SrainWindow *srain_win;
 
 #endif /* __SRAIN_WINDOW_H */

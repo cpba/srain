@@ -27,6 +27,8 @@
 #include <glib.h>
 
 #include "sui/sui.h"
+#include "server_ui_event.h"
+#include "server_irc_event.h"
 #include "meta.h"
 #include "log.h"
 #include "i18n.h"
@@ -58,12 +60,12 @@ static GOptionEntry option_entries[] = {
     {NULL}
 };
 
-static SrnRet create_window(GApplication *app);
-static void on_activate(GApplication *app);
-static void on_shutdown(GApplication *app);
-static int on_handle_local_options(GApplication *app, GVariantDict *options,
+static SrnRet create_window(SrnApplication *app);
+static void on_activate(SrnApplication *app);
+static void on_shutdown(SrnApplication *app);
+static int on_handle_local_options(SrnApplication *app, GVariantDict *options,
         gpointer user_data);
-static int on_command_line(GApplication *app,
+static int on_command_line(SrnApplication *app,
         GApplicationCommandLine *cmdline, gpointer user_data);
 
 static void srn_application_init(SrnApplication *self){
@@ -136,19 +138,100 @@ void srn_application_quit(SrnApplication *app){
     g_application_quit(G_APPLICATION(app));
 }
 
-static SrnRet create_window(GApplication *app){
-    if (srain_win){
-        gtk_window_present(GTK_WINDOW(srain_win));
-        return SRN_ERR;
-    };
+void srn_application_run(SrnApplication *app, int argc, char *argv[]){
+    /* UI event */
+    app->ui_events.disconnect = server_ui_event_disconnect;
+    app->ui_events.quit = server_ui_event_quit;
+    app->ui_events.send = server_ui_event_send;
+    app->ui_events.join = server_ui_event_join;
+    app->ui_events.part = server_ui_event_part;
+    app->ui_events.query = server_ui_event_query;
+    app->ui_events.unquery = server_ui_event_unquery;
+    app->ui_events.kick = server_ui_event_kick;
+    app->ui_events.invite = server_ui_event_invite;
+    app->ui_events.whois = server_ui_event_whois;
+    app->ui_events.ignore = server_ui_event_ignore;
+    app->ui_events.cutover = server_ui_event_cutover;
+    app->ui_events.chan_list = server_ui_event_chan_list;
 
-    srain_win = srain_window_new(SRAIN_APP(app));
-    gtk_window_present(GTK_WINDOW(srain_win));
+    ui_app_events.connect = server_ui_event_connect;
+    ui_app_events.server_list = server_ui_event_server_list;
+
+    /* IRC event */
+    irc_events.connect = server_irc_event_connect;
+    irc_events.connect_fail = server_irc_event_connect_fail;
+    irc_events.disconnect = server_irc_event_disconnect;
+    irc_events.welcome = server_irc_event_welcome;
+    irc_events.nick = server_irc_event_nick;
+    irc_events.quit = server_irc_event_quit;
+    irc_events.join = server_irc_event_join;
+    irc_events.part = server_irc_event_part;
+    irc_events.mode = server_irc_event_mode;
+    irc_events.umode = server_irc_event_umode;
+    irc_events.topic = server_irc_event_topic;
+    irc_events.kick = server_irc_event_kick;
+    irc_events.channel = server_irc_event_channel;
+    irc_events.privmsg = server_irc_event_privmsg;
+    irc_events.notice = server_irc_event_notice;
+    irc_events.channel_notice = server_irc_event_channel_notice;
+    irc_events.invite = server_irc_event_invite;
+    irc_events.ctcp_req = server_irc_event_ctcp_req;
+    irc_events.ctcp_rsp = server_irc_event_ctcp_rsp;
+    irc_events.cap = server_irc_event_cap;
+    irc_events.authenticate = server_irc_event_authenticate;
+    irc_events.ping = server_irc_event_ping;
+    irc_events.pong = server_irc_event_pong;
+    irc_events.error = server_irc_event_error;
+    irc_events.numeric = server_irc_event_numeric;
+
+    server_cmd_init();
+
+    /* Read prefs **/
+    SrnRet ret;
+    SuiAppPrefs ui_app_prefs = {0};
+
+    ret = prefs_read();
+    if (!RET_IS_OK(ret)){
+        sui_message_box(_("Prefs read error"), RET_MSG(ret));
+    }
+
+    ret = log_read_prefs();
+    if (!RET_IS_OK(ret)){
+        sui_message_box(_("Prefs read error"), RET_MSG(ret));
+    }
+
+    ret = prefs_read_server_prefs_list();
+    if (!RET_IS_OK(ret)){
+        sui_message_box(_("Prefs read error"), RET_MSG(ret));
+    }
+
+    ret = prefs_read_sui_app_prefs(&ui_app_prefs);
+    if (!RET_IS_OK(ret)){
+        sui_message_box(_("Prefs read error"), RET_MSG(ret));
+    }
+
+    sui_main_loop(argc, argv, &ui_app_events, &ui_app_prefs);
+    // TODO
+    g_application_run(G_APPLICATION(app), argc, argv);
+}
+
+static SrnRet create_window(SrnApplication *app){
+    SuiWindow *win;
+
+    if (g_slist_length(app->window_list) > 0){
+        return SRN_ERR;
+    }
+
+    win = sui_new_window();
+    if (!win) {
+        return SRN_ERR;
+    }
+    app->window_list = g_slist_append(app->window_list, win);
 
     return SRN_OK;
 }
 
-static void on_activate(GApplication *app){
+static void on_activate(SrnApplication *app){
     SrnRet ret;
 
     ret = create_window(app);
@@ -156,44 +239,55 @@ static void on_activate(GApplication *app){
         return;
     }
 
-    // ret = sui_event_hdr(NULL, SUI_EVENT_ACTIVATE, NULL);
+    ret = rc_read();
     if (!RET_IS_OK(ret)){
         sui_message_box(_("Error"), RET_MSG(ret));
     }
 }
 
-static void on_shutdown(GApplication *app){
-    // sui_event_hdr(NULL, SUI_EVENT_SHUTDOWN, NULL);
+static void on_shutdown(SrnApplication *app){
+    GSList *lst;
+
+    lst = app->server_config_list;
+    while (lst){
+        ServerPrefs *prefs = lst->data;
+        if (prefs->srv && prefs->srv->state == SERVER_STATE_CONNECTED){
+            sirc_cmd_quit(prefs->srv->irc, prefs->quit_message);
+            /* FIXME: we need a global App object in core module,
+             * force free server for now */
+            server_state_transfrom(prefs->srv, SERVER_ACTION_QUIT);
+            server_state_transfrom(prefs->srv, SERVER_ACTION_DISCONNECT_FINISH);
+        }
+        lst = g_slist_next(lst);
+    }
 }
 
-static int on_handle_local_options(GApplication *app, GVariantDict *options,
+static int on_handle_local_options(SrnApplication *app, GVariantDict *options,
         gpointer user_data){
     if (g_variant_dict_lookup(options, "version", "b", NULL)){
-        g_print("%s %s%s\n", PACKAGE_NAME, PACKAGE_VERSION, PACKAGE_BUILD);
+        g_print("%s %s\n", PACKAGE_NAME, app->ver->raw);
         return 0; // Exit
     }
 
     return -1; // Return -1 to let the default option processing continue.
 }
 
-static int on_command_line(GApplication *app,
+static int on_command_line(SrnApplication *app,
         GApplicationCommandLine *cmdline, gpointer user_data){
     char **urls;
     GVariantDict *options;
-    GVariantDict* params;
 
     options = g_application_command_line_get_options_dict(cmdline);
     if (g_variant_dict_lookup(options, G_OPTION_REMAINING, "^as", &urls)){
         /* If we have URLs to open, create window firstly. */
         create_window(app);
-
-        params = g_variant_dict_new(NULL);
-        g_variant_dict_insert(params, "urls", SUI_EVENT_PARAM_STRINGS,
-                urls, g_strv_length(urls));
-
-        // sui_event_hdr(NULL, SUI_EVENT_OPEN, params);
-
-        g_variant_dict_unref(params);
+        
+        for (int i = 0; i < len; i ++){
+            ret = server_url_open(urls[i]);
+            if (!RET_IS_OK(ret)){
+                // return ret;
+            }
+        }
         g_strfreev(urls);
     }
 

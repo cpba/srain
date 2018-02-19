@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <signal.h>
 
-#include "server.h"
+#include "app.h"
 
 #include "filter.h"
 #include "decorator.h"
@@ -41,12 +41,13 @@
 static void quit();
 
 int main(int argc, char *argv[]){
+    SrnApplication *app;
+
     signal(SIGINT, quit);
 
     ret_init();
     log_init();
     i18n_init();
-    prefs_init();
 
     create_user_file();
 
@@ -55,7 +56,8 @@ int main(int argc, char *argv[]){
     filter_init();
     decorator_init();
 
-    server_init_and_run(argc, argv);
+    app = srn_application_new();
+    srn_application_run(app, argc, argv);
 
     quit();
 
@@ -63,9 +65,7 @@ int main(int argc, char *argv[]){
 }
 
 static void quit(){
-    prefs_finalize();
     plugin_finalize();
-    server_finalize();
     log_finalize();
     ret_finalize();
 

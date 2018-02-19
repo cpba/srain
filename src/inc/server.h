@@ -244,9 +244,6 @@ struct _ServerCap {
     Server *srv;
 };
 
-void server_init_and_run(int argc, char *argv[]);
-void server_finalize();
-
 Server* server_new_from_prefs(ServerPrefs *prefs);
 Server *server_get_by_name(const char *name);
 void server_free(Server *srv);

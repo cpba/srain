@@ -45,6 +45,12 @@
 #include "meta.h"
 #include "ret.h"
 
+struct _SuiWindow {
+    SrainWindow *win;
+
+    void *ctx;
+};
+
 struct _SuiSession{
     SrainBuffer *buffer;
 
@@ -55,38 +61,22 @@ struct _SuiSession{
     void *ctx;
 };
 
-bool is_app_run = FALSE;
-SuiAppEvents *app_events = NULL;
-SuiAppPrefs *app_prefs = NULL;
+SuiWindow *sui_win = NULL;
 
-void sui_main_loop(int argc, char *argv[], SuiAppEvents *events, SuiAppPrefs *prefs){
-    SrnRet ret;
-
-    g_return_if_fail(events);
-    g_return_if_fail(prefs);
-
-    app_events = events;
-    app_prefs = prefs;
-
-    ret = sui_app_prefs_check(app_prefs);
-    if (!RET_IS_OK(ret)){
-        sui_message_box(_("Error"), RET_MSG(ret));
+SuiWindow* sui_new_window(void){
+    // Allow only one window for now
+    if (!srn_win){
+        srn_win = g_malloc0(sizeof(SuiWindow));
+        srn_win->win = srain_window_new();
+        gtk_window_present(GTK_WINDOW(srn_win->win));
     }
+    return NULL;
+}
 
-    snotify_init();
+void sui_free_window(SuiWindow *win){
+    g_return_if_fail(win);
 
-    if (theme_load(prefs->theme) == SRN_ERR){
-        char *errmsg = g_strdup_printf(_("Failed to load theme \"%1$s\""), prefs->theme);
-        ERR_FR(errmsg);
-        sui_message_box(_("Error"), errmsg);
-        g_free(errmsg);
-    }
-
-    is_app_run = TRUE;
-    g_application_run(G_APPLICATION(srain_app_new()), argc, argv);
-    is_app_run = FALSE;
-
-    snotify_finalize();
+    g_free(win); // TODO
 }
 
 void sui_proc_pending_event(){
@@ -138,10 +128,10 @@ SrnRet sui_server_session(SuiSession *sui, const char *srv){
     }
     sui->buffer = SRAIN_BUFFER(buffer);
 
-    srain_window_add_buffer(srain_win, sui->buffer);
+    srain_window_add_buffer(sui_win->win, sui->buffer);
     srain_buffer_show_topic(sui->buffer, sui->prefs->show_topic);
 
-    popover = srain_window_get_join_popover(srain_win);
+    popover = srain_window_get_join_popover(sui_win->win);
     srain_join_popover_prepare_model(popover, buffer);
 
     return SRN_OK;
@@ -162,7 +152,7 @@ SrnRet sui_channel_session(SuiSession *sui, SuiSession *srv_sui, const char *cha
     }
 
     sui->buffer = SRAIN_BUFFER(buffer);
-    srain_window_add_buffer(srain_win, SRAIN_BUFFER(sui->buffer));
+    srain_window_add_buffer(sui_win->win, SRAIN_BUFFER(sui->buffer));
     srain_server_buffer_add_buffer(
             SRAIN_SERVER_BUFFER(srv_sui->buffer), SRAIN_BUFFER(buffer));
     srain_buffer_show_topic(SRAIN_BUFFER(sui->buffer), sui->prefs->show_topic);
@@ -187,7 +177,7 @@ SrnRet sui_private_session(SuiSession *sui, SuiSession *srv_sui, const char *nic
     }
 
     sui->buffer = SRAIN_BUFFER(buffer);
-    srain_window_add_buffer(srain_win, SRAIN_BUFFER(sui->buffer));
+    srain_window_add_buffer(sui_win->win, SRAIN_BUFFER(sui->buffer));
     srain_server_buffer_add_buffer(
             SRAIN_SERVER_BUFFER(srv_sui->buffer), SRAIN_BUFFER(buffer));
     srain_buffer_show_topic(SRAIN_BUFFER(sui->buffer), sui->prefs->show_topic);
@@ -218,7 +208,7 @@ void sui_end_session(SuiSession *sui){
         srain_server_buffer_rm_buffer(srv_buf, SRAIN_BUFFER(chat_buf));
     }
 
-    srain_window_rm_buffer(srain_win, sui->buffer);
+    srain_window_rm_buffer(sui_win->win, sui->buffer);
     // FIXME: unref?
     sui->buffer = NULL;
 }
@@ -285,7 +275,7 @@ SuiMessage *sui_add_sys_msg(SuiSession *sui, const char *msg, SysMsgType type){
     srain_msg_list_add_message(list, smsg);
 
     if (type != SYS_MSG_NORMAL){
-        srain_window_stack_sidebar_update(srain_win, buffer, NULL, msg);
+        srain_window_stack_sidebar_update(sui_win->win, buffer, NULL, msg);
     }
 
     return smsg;
@@ -306,7 +296,7 @@ SuiMessage *sui_add_sent_msg(SuiSession *sui, const char *msg){
     sui_message_set_ctx(smsg, sui);
     srain_msg_list_add_message(list, smsg);
 
-    srain_window_stack_sidebar_update(srain_win, buffer, _("You"), msg);
+    srain_window_stack_sidebar_update(sui_win->win, buffer, _("You"), msg);
 
     return smsg;
 }
@@ -331,7 +321,7 @@ SuiMessage *sui_add_recv_msg(SuiSession *sui, const char *nick, const char *id,
     srain_recv_msg_show_avatar(SRAIN_RECV_MSG(smsg), sui->prefs->show_avatar);
     srain_msg_list_add_message(list, smsg);
 
-    srain_window_stack_sidebar_update(srain_win, buffer, nick, msg);
+    srain_window_stack_sidebar_update(sui_win->win, buffer, nick, msg);
     if (strlen(id) != 0){
         comp = srain_buffer_get_entry_completion(buffer);
         srain_entry_completion_add_keyword(comp, nick, KEYWORD_TMP);
@@ -465,11 +455,11 @@ void sui_message_append_message(SuiSession *sui, SuiMessage *smsg, const char *m
     srain_msg_append_msg(smsg, msg);
 
     if (SRAIN_IS_RECV_MSG(smsg)){
-        srain_window_stack_sidebar_update(srain_win, buffer,
+        srain_window_stack_sidebar_update(sui_win->win, buffer,
                 gtk_label_get_text(SRAIN_RECV_MSG(smsg)->nick_label), msg);
     }
     else if (SRAIN_IS_SEND_MSG(smsg)) {
-        srain_window_stack_sidebar_update(srain_win, buffer, _("You"), msg);
+        srain_window_stack_sidebar_update(sui_win->win, buffer, _("You"), msg);
     } else {
         WARN_FR("Append message is not available for message %p", smsg);
     }
@@ -519,7 +509,7 @@ void sui_message_notify(SuiMessage *smsg){
 
     g_return_if_fail(smsg);
 
-    if (srain_window_is_active(srain_win)){
+    if (srain_window_is_active(sui_win->win)){
         return;
     }
 
@@ -549,7 +539,7 @@ void sui_message_notify(SuiMessage *smsg){
     g_return_if_fail(title);
 
     snotify_notify(title, msg, icon);
-    srain_window_tray_icon_stress(srain_win, 1);
+    srain_window_tray_icon_stress(sui_win->win, 1);
 }
 
 void sui_add_completion(SuiSession *sui, const char *keyword){
@@ -589,7 +579,7 @@ void sui_message_box(const char *title, const char *msg){
     }
 
     dia = GTK_MESSAGE_DIALOG(
-            gtk_message_dialog_new(GTK_WINDOW(srain_win),
+            gtk_message_dialog_new(GTK_WINDOW(sui_win->win),
                 GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
                 GTK_MESSAGE_INFO,
                 GTK_BUTTONS_OK,
@@ -639,6 +629,6 @@ void sui_chan_list_end(SuiSession *sui){
 void sui_server_list_add(const char *server){
     SrainConnectPopover *popover;
 
-    popover = srain_window_get_connect_popover(srain_win);
+    popover = srain_window_get_connect_popover(sui_win->win);
     srain_connect_popover_add_server(popover, server);
 }
