@@ -56,7 +56,7 @@ int main(int argc, char *argv[]){
     filter_init();
     decorator_init();
 
-    app = srn_application_new();
+    app = srn_application_get_default();
     srn_application_run(app, argc, argv);
 
     quit();

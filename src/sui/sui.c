@@ -29,7 +29,6 @@
 #include "sui/sui.h"
 
 #include "sui_common.h"
-#include "srain_app.h"
 #include "srain_window.h"
 #include "srain_buffer.h"
 #include "srain_server_buffer.h"
@@ -63,12 +62,13 @@ struct _SuiSession{
 
 SuiWindow *sui_win = NULL;
 
-SuiWindow* sui_new_window(void){
+SuiWindow* sui_new_window(SuiWindowEvent *event, SuiWindowPrefs *prefs){
     // Allow only one window for now
     if (!srn_win){
         srn_win = g_malloc0(sizeof(SuiWindow));
         srn_win->win = srain_window_new();
         gtk_window_present(GTK_WINDOW(srn_win->win));
+        return srn_win;
     }
     return NULL;
 }

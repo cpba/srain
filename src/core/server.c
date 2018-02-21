@@ -85,7 +85,9 @@ Server* server_new_from_prefs(ServerPrefs *prefs){
     srv->cur_chat = srv->chat;
 
     /* sirc */
-    srv->irc = sirc_new_session(&irc_events, prefs->irc);
+    srv->irc = sirc_new_session(
+            &srn_application_get_default()->irc_events,
+            prefs->irc);
     if (!srv->irc) goto bad;
     sirc_set_ctx(srv->irc, srv);
 

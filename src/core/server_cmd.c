@@ -364,7 +364,10 @@ static SrnRet on_command_server(Command *cmd, void *user_data){
     }
 
     if (g_ascii_strcasecmp(subcmd, "add") == 0){
-        ret = prefs_read_server_prefs(prefs);
+        ret = srn_config_manager_read_server_config(
+                srn_application_get_default()->cfg_mgr,
+                prefs,
+                name);
         if (!RET_IS_OK(ret)){
             return ret;
         }
@@ -502,7 +505,10 @@ static SrnRet on_command_connect(Command *cmd, void *user_data){
         goto FIN;
     }
 
-    ret = prefs_read_server_prefs(prefs);
+    ret = srn_config_manager_read_server_config(
+            srn_application_get_default()->cfg_mgr,
+            prefs,
+            host);
     if (!RET_IS_OK(ret)){
         goto FIN;
     }

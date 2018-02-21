@@ -16,8 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SRN_APPLICATION_H
-#define __SRN_APPLICATION_H
+#ifndef __APP_H
+#define __APP_H
 
 #include <glib.h>
 
@@ -57,15 +57,25 @@ struct _SrnApplicationConfig {
     bool create_user_file; // TODO
     char *id;
     char *theme;
-    GSList *server_list;
+    GSList *server_cfg_list;
 };
 
 GType srn_application_get_type(void);
 SrnApplication *srn_application_new(void);
+SrnApplication* srn_application_get_default(void);
 void srn_application_run(SrnApplication *app, int argc, char *argv[]);
 void srn_application_quit(SrnApplication *app);
 
-/* Only one SrnApplication instance in one application */
-extern SrnApplication* const srn_app;
+SrnApplicationConfig *srn_application_config_new(void);
+SrnRet srn_application_config_check(SrnApplicationConfig *cfg);
+void srn_application_config_free(SrnApplicationConfig *cfg);
 
-#endif /* __SRN_APPLICATION_H */
+// FIXME: config
+#include "log.h"
+#include "server.h"
+SrnRet srn_config_manager_read_log_config(SrnConfigManager *mgr, LogPrefs *cfg);
+SrnRet srn_config_manager_read_application_config(SrnConfigManager *mgr, SrnApplicationConfig *cfg);
+SrnRet srn_config_manager_read_server_config(SrnConfigManager *mgr, ServerPrefs *cfg, const char *srv_name);
+SrnRet srn_config_manager_read_chat_config(SrnConfigManager *mgr, ChatPrefs *cfg, const char *srv_name, const char *chat_name);
+
+#endif /* __APP_H */

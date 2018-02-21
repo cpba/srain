@@ -198,6 +198,9 @@ struct _ServerPrefs {
     char *name;
     GSList *addrs;
     char *passwd;
+    // FIXME: remove
+    char *host;
+    int port;
 
     /* User */
     char *nickname;

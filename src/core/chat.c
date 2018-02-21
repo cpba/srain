@@ -56,7 +56,11 @@ Chat *chat_new(Server *srv, const char *name){
 
     /* sui */
     chat->prefs = chat_prefs_new();
-    ret = prefs_read_chat_prefs(chat->prefs, chat->srv->prefs->name, chat->name);
+    ret = srn_config_manager_read_chat_config(
+            srn_application_get_default()->cfg_mgr,
+            chat->prefs,
+            chat->srv->prefs->name,
+            chat->name);
     if (!RET_IS_OK(ret)){
         ERR_FR("Read sui prefs failed: %s", RET_MSG(ret));
     }

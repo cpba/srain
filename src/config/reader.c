@@ -31,6 +31,10 @@
 #include "i18n.h"
 #include "utils.h"
 
+// FIXME: config
+#include "app.h"
+#include "server.h"
+
 /* Libconfig helpers */
 static int config_lookup_string_ex(const config_t *config, const char *path, char **value);
 static int config_setting_lookup_string_ex(const config_setting_t *config, const char *name, char **value);
@@ -45,8 +49,8 @@ static SrnRet read_log_targets_from_log(config_setting_t *log, const char *name,
 static SrnRet read_application_config_from_cfg(config_t *cfg, SrnApplicationConfig *app_cfg);
 
 static SrnRet read_server_config_from_server(config_setting_t *server, ServerPrefs *prefs);
-static SrnRet read_server_config_from_server_list(config_setting_t *server_list, ServerPrefs *prefs);
-static SrnRet read_server_config_from_cfg(config_t *cfg, ServerPrefs *prefs);
+static SrnRet read_server_config_from_server_list(config_setting_t *server_list, ServerPrefs *prefs, const char *srv_name);
+static SrnRet read_server_config_from_cfg(config_t *cfg, ServerPrefs *prefs, const char *srv_name);
 
 static SrnRet read_chat_config_from_chat(config_setting_t *chat, ChatPrefs *prefs);
 static SrnRet read_chat_config_from_chat_list(config_setting_t *chat_list, ChatPrefs *prefs, const char *chat_name);
@@ -93,20 +97,19 @@ SrnRet srn_config_manager_read_application_config(SrnConfigManager *mgr,
     }
 
     return SRN_OK;
-    return SRN_OK;
 }
 
 SrnRet srn_config_manager_read_server_config(SrnConfigManager *mgr,
-        ServerPrefs *prefs){
+        ServerPrefs *prefs, const char *srv_name){
     SrnRet ret;
 
-    ret = read_server_config_from_cfg(&mgr->system_cfg, prefs);
+    ret = read_server_config_from_cfg(&mgr->system_cfg, prefs, srv_name);
     if (!RET_IS_OK(ret)){
         return RET_ERR(_("Error occurred while read server config in %1$s: %2$s"),
                 config_setting_source_file(config_root_setting(&mgr->system_cfg)),
                 RET_MSG(ret));
     }
-    ret = read_server_config_from_cfg(&mgr->user_cfg, prefs);
+    ret = read_server_config_from_cfg(&mgr->user_cfg, prefs, srv_name);
     if (!RET_IS_OK(ret)){
         return RET_ERR(_("Error occurred while read server config in %1$s: %2$s"),
                 config_setting_source_file(config_root_setting(&mgr->user_cfg)),
@@ -218,7 +221,7 @@ static SrnRet read_application_config_from_cfg(config_t *cfg,
             }
             prefs->predefined = TRUE;
 
-            ret = read_server_config_from_cfg(cfg, prefs);
+            ret = read_server_config_from_cfg(cfg, prefs, name);
             if (!RET_IS_OK(ret)){
                 server_prefs_free(prefs);
                 return ret;
@@ -234,8 +237,7 @@ static SrnRet read_application_config_from_cfg(config_t *cfg,
 static SrnRet read_server_config_from_server(config_setting_t *server,
         ServerPrefs *prefs){
     /* Read server meta info */
-    // the name of prefs has been set
-    // config_setting_lookup_string_ex(server, "name", &prefs->name);
+    config_setting_lookup_string_ex(server, "name", &prefs->name);
     config_setting_lookup_string_ex(server, "password", &prefs->passwd);
     config_setting_lookup_bool_ex(server, "tls", &prefs->irc->tls);
     config_setting_lookup_bool_ex(server, "tls_noverify", &prefs->irc->tls_noverify);
@@ -290,7 +292,7 @@ static SrnRet read_server_config_from_server(config_setting_t *server,
 }
 
 static SrnRet read_server_config_from_server_list(config_setting_t *server_list,
-        ServerPrefs *prefs){
+        ServerPrefs *prefs, const char *srv_name){
     int count;
     SrnRet ret;
 
@@ -303,9 +305,9 @@ static SrnRet read_server_config_from_server_list(config_setting_t *server_list,
         if (!server) break;
 
         config_setting_lookup_string(server, "name", &name);
-        if (g_strcmp0(prefs->name, name) != 0) continue;
+        if (g_strcmp0(srv_name, name) != 0) continue;
 
-        DBG_FR("Read: server_list.[name = %s], srv_name: %s", name, prefs->name);
+        DBG_FR("Read: server_list.[name = %s], srv_name: %s", name, srv_name);
         ret = read_server_config_from_server(server, prefs);
         if (!RET_IS_OK(ret)) return ret;
     }
@@ -313,24 +315,25 @@ static SrnRet read_server_config_from_server_list(config_setting_t *server_list,
     return SRN_OK;
 }
 
-static SrnRet read_server_config_from_cfg(config_t *cfg, ServerPrefs *prefs){
+static SrnRet read_server_config_from_cfg(config_t *cfg, ServerPrefs *prefs,
+        const char *srv_name){
     SrnRet ret;
     config_setting_t *server;
 
     /* Read server */
     server = config_lookup(cfg, "server");
     if (server){
-        DBG_FR("Read: server, srv_name: %s", prefs->name);
+        DBG_FR("Read: server, srv_name: %s", srv_name);
         ret = read_server_config_from_server(server, prefs);
         if (!RET_IS_OK(ret)) return ret;
     }
 
-    /* Read server_list[name = prefs->name] */
+    /* Read server_list[name = srv_name] */
     config_setting_t *server_list;
 
     server_list = config_lookup(cfg, "server_list");
     if (server_list){
-        ret = read_server_config_from_server_list(server_list, prefs);
+        ret = read_server_config_from_server_list(server_list, prefs, srv_name);
         if (!RET_IS_OK(ret)) return ret;
     }
 

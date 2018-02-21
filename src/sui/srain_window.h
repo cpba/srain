@@ -20,7 +20,6 @@
 #define __SRAIN_WINDOW_H
 
 #include <gtk/gtk.h>
-#include "srain_app.h"
 #include "srain_buffer.h"
 #include "srain_server_buffer.h"
 #include "srain_connect_popover.h"
@@ -36,6 +35,7 @@ typedef struct _SrainWindowClass SrainWindowClass;
 GType srain_window_get_type(void);
 SrainWindow *srain_window_new(void);
 
+SrainWindow* srain_window_get_default(void);
 void srain_window_add_buffer(SrainWindow *win, SrainBuffer *buffer);
 void srain_window_rm_buffer(SrainWindow *win, SrainBuffer *buffer);
 SrainBuffer *srain_window_get_buffer(SrainWindow *win, const char *name, const char *remark);

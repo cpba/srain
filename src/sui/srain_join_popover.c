@@ -265,7 +265,7 @@ static void popover_on_visible(GObject *object, GParamSpec *pspec, gpointer data
     SrainServerBuffer *buf;
     SrainJoinPopover *popover;
 
-    win = sui_win->win;
+    win = srain_window_get_default();
     popover = SRAIN_JOIN_POPOVER(object);
     buf = srain_window_get_cur_server_buffer(win);
 
@@ -291,7 +291,7 @@ static void join_button_on_click(gpointer user_data){
     SrainJoinPopover *popover;
     SrainBuffer *buffer;
 
-    buffer = srain_window_get_cur_buffer(sui_win->win);
+    buffer = srain_window_get_cur_buffer(srain_window_get_default());
     if (!SRAIN_IS_BUFFER(buffer)){
        sui_message_box(_("Error"),
                _("Please connect to server before joining any channel"));
@@ -373,7 +373,7 @@ static void refresh_button_on_clicked(gpointer user_data){
     SrnRet ret;
     SrainBuffer *buffer;
 
-    buffer = srain_window_get_cur_buffer(sui_win->win);
+    buffer = srain_window_get_cur_buffer(srain_window_get_default());
     if (!SRAIN_IS_BUFFER(buffer)){
        sui_message_box(_("Error"), _("Please connect to server before searching any channel"));
        return;

@@ -32,7 +32,6 @@
 #include "sui_common.h"
 #include "sui_event_hdr.h"
 #include "theme.h"
-#include "srain_app.h"
 #include "srain_window.h"
 #include "srain_buffer.h"
 #include "srain_server_buffer.h"
@@ -74,8 +73,11 @@ struct _SrainWindowClass {
 
 G_DEFINE_TYPE(SrainWindow, srain_window, GTK_TYPE_APPLICATION_WINDOW);
 
+static SrainWindow *default_window = NULL;
+
 static void quit_menu_item_on_activate(){
-    srain_app_quit(srain_app);
+    // srain_app_quit(srain_app);
+    // FIXME
 }
 
 static void on_destroy(SrainWindow *win){
@@ -225,7 +227,14 @@ static void srain_window_class_init(SrainWindowClass *class){
 }
 
 SrainWindow* srain_window_new(void){
+    if (default_window){
+        return default_window;
+    }
     return g_object_new(SRAIN_TYPE_WINDOW, NULL);
+}
+
+SrainWindow* srain_window_get_default(void){
+    return srain_window_new();
 }
 
 void srain_window_add_buffer(SrainWindow *win, SrainBuffer *buffer){

@@ -89,7 +89,10 @@ SrnRet server_url_open(const char *url){
     }
     /* Instantiate Server */
     if (!prefs->srv){
-        ret = prefs_read_server_prefs(prefs);
+        ret = srn_config_manager_read_server_config(
+                srn_application_get_default()->cfg_mgr,
+                prefs,
+                prefs->name);
         if (!RET_IS_OK(ret)){
             goto fin;
         }

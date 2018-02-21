@@ -92,16 +92,20 @@ SrnRet server_ui_event_connect(SuiEvent event, GVariantDict *params){
         if (!prefs) {
             return RET_ERR(_("Failed to create server \"%1$s\""), host);
         }
-        ret = prefs_read_server_prefs(prefs);
+        ret = srn_config_manager_read_server_config(
+                srn_application_get_default()->cfg_mgr,
+                prefs,
+                host);
         if (!RET_IS_OK(ret)){
             server_prefs_free(prefs);
             return ret;
         }
 
-        prefs->port = port;
-        if (!str_is_empty(host)){
-            str_assign(&prefs->host, host);
-        }
+        // FIXME: config
+        // prefs->port = port;
+        // if (!str_is_empty(host)){
+            // str_assign(&prefs->host, host);
+        // }
         if (!str_is_empty(passwd)){
             str_assign(&prefs->passwd, passwd);
         }
